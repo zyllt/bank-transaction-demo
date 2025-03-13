@@ -1,189 +1,313 @@
-// package com.github.miles.transaction.service;
+package com.github.miles.transaction.service;
 
-// import static org.junit.jupiter.api.Assertions.assertEquals;
-// import static org.junit.jupiter.api.Assertions.assertNotNull;
-// import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// import java.math.BigDecimal;
-// import java.util.List;
-// import java.util.UUID;
+import java.math.BigDecimal;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
-// import org.junit.jupiter.api.BeforeEach;
-// import org.junit.jupiter.api.Test;
-// import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.boot.test.context.SpringBootTest;
-// import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
-// import com.github.miles.transaction.constants.TransactionType;
-// import com.github.miles.transaction.dto.TransactionDTO;
-// import com.github.miles.transaction.dto.request.CreateTransactionReq;
-// import com.github.miles.transaction.exception.TransactionException.TransactionNotFoundException;
+import com.github.miles.transaction.BaseTest;
+import com.github.miles.transaction.api.base.PageResult;
+import com.github.miles.transaction.constants.DemoConstants;
+import com.github.miles.transaction.constants.TransactionType;
+import com.github.miles.transaction.dto.TransactionDTO;
+import com.github.miles.transaction.dto.request.CreateTransactionReq;
+import com.github.miles.transaction.dto.request.UpdateTransactionReq;
+import com.github.miles.transaction.exception.TransactionException.TransactionNoPermissionException;
+import com.github.miles.transaction.exception.TransactionException.TransactionNotFoundException;
+import com.github.miles.transaction.exception.TransactionException.TransactionParamInvalidException;
+/**
+ * 
+ * Test for the TransactionService
+ * 
+ * @author miles
+ * @version 1.0 
+ * @since 2025-03-13
+ */
+@SpringBootTest
+class TransactionServiceTest extends BaseTest{
 
-// /**
-//  * 
-//  * Test for the TransactionService
-//  * 
-//  * @author miles
-//  * @version 1.0 
-//  * @since 2025-03-13
-//  */
-// @SpringBootTest
-// @ActiveProfiles("test")
-// class TransactionServiceTest {
+    @Autowired
+    private TransactionService transactionService;
 
-//     @Autowired
-//     private TransactionService transactionService;
+
+    @Test
+    void testWhenCreateTransactionReturnSuccess() {
+        TransactionDTO response = transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID,validRequest);
+        // Then the transaction should be created successfully
+        assertNotNull(response);
+        assertNotNull(response.getId());
+        assertEquals(validRequest.getAccountId(), response.getAccountId());
+        assertEquals(validRequest.getAmount(), response.getAmount());
+        assertEquals(validRequest.getTransactionType(), response.getTransactionType());
+        assertEquals(validRequest.getDescription(), response.getDescription());
+
+        //验证完清除
+        transactionService.deleteTransaction(response.getTransactionId(), DemoConstants.DEMO_MEMBER_ID);
+    }
+
+    @Test
+    void testWhenCreateTransactionRequestIsNullShouldThrowException() {
+        assertThrows(NullPointerException.class, () -> {
+            transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID, null);
+        });
+    }
     
-//     private CreateTransactionReq validRequest;
+    @Test
+    void testWhenCreateTransactionParamInvalidShouldThrowException() {
+        //参数不正确
+        CreateTransactionReq invalidRequest = new CreateTransactionReq();
+        invalidRequest.setAccountId(null);
+        invalidRequest.setOpponentAccountId(null);
+        invalidRequest.setAmount(null);
+        invalidRequest.setTransactionType(null);
+        invalidRequest.setDescription(null);
+
+        assertThrows(TransactionParamInvalidException.class, () -> {
+            transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID, invalidRequest);
+        });
+    }
+
+    @Test
+    void testWhenCreateTransactionAccountIdNotPassedShouldThrowException() {
+        CreateTransactionReq invalidRequest = new CreateTransactionReq();
+        invalidRequest.setAccountId(null);
+        invalidRequest.setOpponentAccountId("12345678_");
+        invalidRequest.setAmount(new BigDecimal("200.00"));
+        invalidRequest.setTransactionType(TransactionType.WITHDRAWAL.getType());
+        invalidRequest.setDescription("test");
+
+        assertThrows(TransactionParamInvalidException.class, () -> {
+            transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID, invalidRequest);
+        });
+    }
+
+    @Test
+    void testWhenCreateTransactionOpponentAccountIdNotPassedShouldThrowException() {
+        CreateTransactionReq invalidRequest = new CreateTransactionReq();
+        invalidRequest.setAccountId("12345678_");
+        invalidRequest.setOpponentAccountId(null);
+        invalidRequest.setAmount(new BigDecimal("200.00"));
+        invalidRequest.setTransactionType(TransactionType.WITHDRAWAL.getType());
+        invalidRequest.setDescription("test");
+
+        assertThrows(TransactionParamInvalidException.class, () -> {
+            transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID, invalidRequest);
+        });
+    }
+
+    @Test
+    void testWhenGetTransactionReturnSuccess() {
+        //先创建一个
+        TransactionDTO createdTransaction = transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID,validRequest);
+
+        TransactionDTO response = transactionService.getTransaction(createdTransaction.getTransactionId(),DemoConstants.DEMO_MEMBER_ID);
+        
+        assertNotNull(response);
+        assertEquals(createdTransaction.getTransactionId(), response.getTransactionId());
+
+        //验证完清除
+        transactionService.deleteTransaction(createdTransaction.getTransactionId(), DemoConstants.DEMO_MEMBER_ID);
+    }
     
-//     @BeforeEach
-//     void setUp() {
-//         // Create a sample transaction request for testing
-//         validRequest = CreateTransactionReq.builder()
-//                 .accountNumber("12345678")
-//                 .amount(new BigDecimal("100.00"))
-//                 .type(TransactionType.DEPOSIT)
-//                 .description("Test transaction")
-//                 .build();
+    @Test
+    void testWhenGetTransactionNotFoundShouldThrowException() {
+        //不存在transactionId
+        String nonExistentId = UUID.randomUUID().toString().replace("-", "");
         
-//         // Create a transaction for testing updates and deletes
-//         TransactionDTO response = transactionService.createTransaction(validRequest);
-//         testId = response.getId();
-//     }
+        assertThrows(TransactionNotFoundException.class, () -> {
+            transactionService.getTransaction(nonExistentId,DemoConstants.DEMO_MEMBER_ID);
+        });
+    }
     
-//     @Test
-//     void testCreateTransaction() {
-//         // Given a valid transaction request
+    @Test
+    void testWhenUpdateTransactionReturnSuccess() {
+        //先创建一个
+        TransactionDTO createdTransaction = transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID,validRequest);
+
+        // Given an updated transaction request
+        UpdateTransactionReq updateRequest = new UpdateTransactionReq();
+        updateRequest.setAccountId("87654321");
+        updateRequest.setOpponentAccountId("12345678_");
+        updateRequest.setAmount(new BigDecimal("200.00"));
+        updateRequest.setTransactionType(TransactionType.WITHDRAWAL.getType());
+        updateRequest.setDescription("Updated transaction");
         
-//         // When creating the transaction
-//         TransactionDTO response = transactionService.createTransaction(validRequest);
+        TransactionDTO response = transactionService.updateTransaction(createdTransaction.getTransactionId(), updateRequest);
         
-//         // Then the transaction should be created successfully
-//         assertNotNull(response);
-//         assertNotNull(response.getId());
-//         assertEquals(validRequest.getAccountNumber(), response.getAccountNumber());
-//         assertEquals(validRequest.getAmount(), response.getAmount());
-//         assertEquals(validRequest.getType(), response.getType());
-//         assertEquals(validRequest.getDescription(), response.getDescription());
-//     }
+        assertNotNull(response);
+        assertEquals(createdTransaction.getTransactionId(), response.getTransactionId());
+        assertEquals(updateRequest.getAccountId(), response.getAccountId());
+        assertEquals(updateRequest.getOpponentAccountId(), response.getOpponentAccountId());
+        assertEquals(updateRequest.getAmount(), response.getAmount());
+        assertEquals(updateRequest.getTransactionType(), response.getTransactionType());
+        assertEquals(updateRequest.getDescription(), response.getDescription());
+
+        //验证完清除
+        transactionService.deleteTransaction(createdTransaction.getTransactionId(), DemoConstants.DEMO_MEMBER_ID);
+    }
+
+    //更新参数不合法
+    @Test
+    void testWhenUpdateTransactionParamInvalidShouldThrowException() {
+        //先创建一个
+        TransactionDTO createdTransaction = transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID,validRequest);
+        
+        UpdateTransactionReq updateRequest = new UpdateTransactionReq();
+        updateRequest.setAccountId(null);
+        updateRequest.setOpponentAccountId(null);
+        updateRequest.setAmount(null);
+        updateRequest.setTransactionType(null);
+        updateRequest.setDescription(null);
+
+        assertThrows(TransactionParamInvalidException.class, () -> {
+            transactionService.updateTransaction(createdTransaction.getTransactionId(), updateRequest);
+        });
+
+        //验证完清除
+        transactionService.deleteTransaction(createdTransaction.getTransactionId(), DemoConstants.DEMO_MEMBER_ID);  
+    }
     
-//     @Test
-//     void testGetTransaction() {
-//         // Given an existing transaction
+    @Test
+    void testWhenUpdateTransactionNotFoundShouldThrowException() {
+        //不存在transactionId
+        String nonExistentId = UUID.randomUUID().toString().replace("-", "");
         
-//         // When retrieving the transaction
-//         TransactionDTO response = transactionService.getTransaction(testId);
-        
-//         // Then the transaction should be returned successfully
-//         assertNotNull(response);
-//         assertEquals(testId, response.getId());
-//     }
+        UpdateTransactionReq updateRequest = new UpdateTransactionReq();
+        updateRequest.setAccountId("87654321");
+        updateRequest.setOpponentAccountId("12345678_");
+        updateRequest.setAmount(new BigDecimal("200.00"));
+        updateRequest.setTransactionType(TransactionType.WITHDRAWAL.getType());
+        updateRequest.setDescription("Updated transaction");
+
+        assertThrows(TransactionNotFoundException.class, () -> {
+            transactionService.updateTransaction(nonExistentId, updateRequest);
+        });
+    }
+
+    //更新时transactionId没有传
+    @Test
+    void testWhenUpdateTransactionTransactionIdNotPassedShouldThrowException() {
+        UpdateTransactionReq updateRequest = new UpdateTransactionReq();
+        updateRequest.setAccountId("87654321");
+        updateRequest.setOpponentAccountId("12345678_");
+        updateRequest.setAmount(new BigDecimal("200.00"));
+
+        assertThrows(TransactionParamInvalidException.class, () -> {
+            transactionService.updateTransaction(null, updateRequest);
+        });
+    }
     
-//     @Test
-//     void testGetTransactionNotFound() {
-//         // Given a non-existent transaction ID
-//         UUID nonExistentId = UUID.randomUUID();
+    @Test
+    void testWhenSameMemberIdDeleteTransactionSuccess() {
+        //创建一个交易
+        TransactionDTO createdTransaction = transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID,validRequest);
+        String transactionIdToDelete = createdTransaction.getTransactionId();
         
-//         // When trying to retrieve the transaction
-//         // Then an exception should be thrown
-//         assertThrows(TransactionNotFoundException.class, () -> {
-//             transactionService.getTransaction(nonExistentId);
-//         });
-//     }
+        transactionService.deleteTransaction(transactionIdToDelete, DemoConstants.DEMO_MEMBER_ID);
+        
+        // Then the transaction should be deleted
+        assertThrows(TransactionNotFoundException.class, () -> {
+            transactionService.getTransaction(transactionIdToDelete,DemoConstants.DEMO_MEMBER_ID);
+        });
+    }
     
-//     @Test
-//     void testUpdateTransaction() {
-//         // Given an updated transaction request
-//         CreateTransactionReq updateRequest = CreateTransactionReq.builder()
-//                 .accountNumber("87654321")
-//                 .amount(new BigDecimal("200.00"))
-//                 .type(TransactionType.WITHDRAWAL)
-//                 .description("Updated transaction")
-//                 .build();
+    @Test
+    void testWhenDifferentMemberIdDeleteTransactionShouldThrowException() {
+         //创建一个交易
+         TransactionDTO createdTransaction = transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID,validRequest);
+         String transactionIdToDelete = createdTransaction.getTransactionId();
         
-//         // When updating the transaction
-//         TransactionDTO response = transactionService.updateTransaction(testId, updateRequest);
-        
-//         // Then the transaction should be updated successfully
-//         assertNotNull(response);
-//         assertEquals(testId, response.getId());
-//         assertEquals(updateRequest.getAccountNumber(), response.getAccountNumber());
-//         assertEquals(updateRequest.getAmount(), response.getAmount());
-//         assertEquals(updateRequest.getType(), response.getType());
-//         assertEquals(updateRequest.getDescription(), response.getDescription());
-//     }
+        assertThrows(TransactionNoPermissionException.class, () -> {
+            transactionService.deleteTransaction(transactionIdToDelete, DemoConstants.DEMO_MEMBER_ID+1);
+        });
+
+        //验证完清除
+        transactionService.deleteTransaction(transactionIdToDelete, DemoConstants.DEMO_MEMBER_ID);
+    }
+
+    //删除一个不存在的,正常返回
+    @Test
+    void testWhenDeleteNonExistentTransactionShouldSuccess() {
+        String nonExistentId = UUID.randomUUID().toString().replace("-", "");
+        transactionService.deleteTransaction(nonExistentId, DemoConstants.DEMO_MEMBER_ID);
+    }
+
     
-//     @Test
-//     void testUpdateTransactionNotFound() {
-//         // Given a non-existent transaction ID
-//         UUID nonExistentId = UUID.randomUUID();
-        
-//         // When trying to update the transaction
-//         // Then an exception should be thrown
-//         assertThrows(TransactionNotFoundException.class, () -> {
-//             transactionService.updateTransaction(nonExistentId, validRequest);
-//         });
-//     }
+    @Test
+    void testWhenPageListTransactionsAllReturnSuccess() throws Exception {
+        //创建5个
+        Map<String,TransactionDTO> createdTransactions = new HashMap<>();
+        int count = 5;
+        for (int i = 0; i < count; i++) {
+            TransactionDTO transaction = transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID,validRequest);
+            //sleep
+            TimeUnit.MILLISECONDS.sleep(20);
+            createdTransactions.put(transaction.getTransactionId(), transaction);
+        }
+        int page = 1;
+        int size = 10;
+        PageResult<TransactionDTO> pageResult = transactionService.pageListTransactions(page, size);
+        assertNotNull(pageResult);
+        assertEquals(size, pageResult.getPageSize());
+        assertEquals(page, pageResult.getPage());
+        assertTrue(pageResult.getTotal() >= count);
+        assertEquals(1, pageResult.getTotalPages());
+        assertTrue(count <= pageResult.getResults().size());
+        //比对返回的顺序是transactionTime正序
+        List<TransactionDTO> originResults = pageResult.getResults();
+        List<TransactionDTO> sortedResults = originResults.stream().sorted(Comparator.comparing(TransactionDTO::getTransactionTime)).toList();
+        for (int i = 0; i < count; i++) {
+            assertEquals(sortedResults.get(i).getTransactionId(), originResults.get(i).getTransactionId());
+        }
+
+        //比对createdTransactions和返回的results
+        originResults.forEach(transaction -> {
+            assertEquals(createdTransactions.get(transaction.getTransactionId()), transaction);
+        });
+
+        //验证完清除
+        createdTransactions.values().forEach(transaction -> {
+            transactionService.deleteTransaction(transaction.getTransactionId(), DemoConstants.DEMO_MEMBER_ID);
+        });
+    }
     
-//     @Test
-//     void testDeleteTransaction() {
-//         // Given an existing transaction
-//         TransactionDTO createdTransaction = transactionService.createTransaction(validRequest);
-//         UUID idToDelete = createdTransaction.getId();
+    @Test
+    void testWhenPageListTransactionsPartionsReturnSuccess() {
+        Map<String,TransactionDTO> createdTransactions = new HashMap<>();
+
+        int count = 21;
+        for (int i = 0; i < count; i++) {
+            TransactionDTO transaction = transactionService.createTransaction(DemoConstants.DEMO_MEMBER_ID,validRequest);
+            createdTransactions.put(transaction.getTransactionId(), transaction);
+        }
         
-//         // When deleting the transaction
-//         transactionService.deleteTransaction(idToDelete);
+        // When retrieving with a specific page size
+        int page = 1;
+        int size = 10;
+        PageResult<TransactionDTO> page1 = transactionService.pageListTransactions(page, size);
+        PageResult<TransactionDTO> page2 = transactionService.pageListTransactions(page+1, size);
+        PageResult<TransactionDTO> page3 = transactionService.pageListTransactions(page+2, size);
         
-//         // Then the transaction should be deleted
-//         assertThrows(TransactionNotFoundException.class, () -> {
-//             transactionService.getTransaction(idToDelete);
-//         });
-//     }
+        assertEquals(size, page1.getResults().size());
+        assertEquals(size, page2.getResults().size());
+        assertEquals(true, page3.getResults().size() > 0);
+
+        //验证完清除
+        createdTransactions.values().forEach(transaction -> {
+            transactionService.deleteTransaction(transaction.getTransactionId(), DemoConstants.DEMO_MEMBER_ID);
+        });
+    }
     
-//     @Test
-//     void testDeleteTransactionNotFound() {
-//         // Given a non-existent transaction ID
-//         UUID nonExistentId = UUID.randomUUID();
-        
-//         // When trying to delete the transaction
-//         // Then an exception should be thrown
-//         assertThrows(TransactionNotFoundException.class, () -> {
-//             transactionService.deleteTransaction(nonExistentId);
-//         });
-//     }
-    
-//     @Test
-//     void testGetAllTransactions() {
-//         // Given multiple transactions in the system
-//         for (int i = 0; i < 5; i++) {
-//             transactionService.createTransaction(validRequest);
-//         }
-        
-//         // When retrieving all transactions with pagination
-//         List<TransactionDTO> transactions = transactionService.getAllTransactions(0, 10);
-        
-//         // Then all transactions should be returned
-//         assertNotNull(transactions);
-//         // We should have at least 6 transactions (5 from this test + 1 from setUp)
-//         assertEquals(true, transactions.size() >= 6);
-//     }
-    
-//     @Test
-//     void testGetAllTransactionsPagination() {
-//         // Given more transactions than the page size
-//         for (int i = 0; i < 15; i++) {
-//             transactionService.createTransaction(validRequest);
-//         }
-        
-//         // When retrieving with a specific page size
-//         List<TransactionDTO> page1 = transactionService.getAllTransactions(0, 5);
-//         List<TransactionDTO> page2 = transactionService.getAllTransactions(1, 5);
-//         List<TransactionDTO> page3 = transactionService.getAllTransactions(2, 5);
-        
-//         // Then each page should have the correct number of transactions
-//         assertEquals(5, page1.size());
-//         assertEquals(5, page2.size());
-//         // Page 3 might have fewer items depending on how many were created
-//         assertEquals(true, page3.size() > 0);
-//     }
-// } 
+} 

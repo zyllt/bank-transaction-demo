@@ -1,5 +1,5 @@
 
-package com.github.miles.transaction;
+package com.github.miles.transaction.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

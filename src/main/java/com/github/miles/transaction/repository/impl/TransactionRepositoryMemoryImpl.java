@@ -3,13 +3,12 @@ package com.github.miles.transaction.repository.impl;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Repository;
 
-import jakarta.annotation.Nonnull;
 import com.github.miles.transaction.model.TransactionPO;
 import com.github.miles.transaction.repository.TransactionRepository;
 
@@ -28,37 +27,31 @@ public class TransactionRepositoryMemoryImpl implements TransactionRepository {
     private final AtomicLong idGenerator = new AtomicLong(0);
 
     /**
-     * 交易存储,transactionId:transactionTime -> transactionPO
-     * <p>
-     * 使用transactionTime排序
+     * 交易存储,transactionId -> transactionPO
      */
-    private final ConcurrentSkipListMap<TransactionIdAndTimeKey, TransactionPO> transactionMap = new ConcurrentSkipListMap<>(
-            Comparator.comparing(TransactionIdAndTimeKey::transactionTime));
+    private final Map<String, TransactionPO> transactionMap = new ConcurrentHashMap<>();
+
 
     @Override
     public TransactionPO save(TransactionPO transactionPO) {
         transactionPO.setId(idGenerator.incrementAndGet());
-        transactionMap.put(
-                new TransactionIdAndTimeKey(transactionPO.getTransactionId(), transactionPO.getTransactionTime()),
-                transactionPO);
+        transactionMap.put(transactionPO.getTransactionId(), transactionPO);
         return transactionPO;
     }
 
     @Override
     public TransactionPO findByTransactionId(String transactionId) {
-        return transactionMap.get(new TransactionIdAndTimeKey(transactionId, null));
+        return transactionMap.get(transactionId);
     }
 
     @Override
     public int update(TransactionPO transaction) {
-        return transactionMap.replace(
-                new TransactionIdAndTimeKey(transaction.getTransactionId(), transaction.getTransactionTime()),
-                transaction) == null ? 0 : 1;
+        return transactionMap.replace(transaction.getTransactionId(), transaction) == null ? 0 : 1;
     }
 
     @Override
     public int delete(String transactionId, Long memberId) {
-        return transactionMap.remove(new TransactionIdAndTimeKey(transactionId, null)) == null ? 0 : 1;
+        return transactionMap.remove(transactionId) == null ? 0 : 1;
     }
 
     @Override
@@ -67,7 +60,7 @@ public class TransactionRepositoryMemoryImpl implements TransactionRepository {
     }
 
     /**
-     * 分页查询交易,以transactionTime排序
+     * 分页查询交易,默认按照交易时间正序
      * 
      * @param page 页码
      * @param size 每页大小
@@ -75,35 +68,14 @@ public class TransactionRepositoryMemoryImpl implements TransactionRepository {
      */
     @Override
     public List<TransactionPO> pageList(int page, int size) {
-        return transactionMap.sequencedEntrySet()
+        return transactionMap
+                .values()
                 .stream()
+                .sorted(Comparator.comparing(TransactionPO::getTransactionTime))
                 .skip((long) (page - 1) * size)
                 .limit(size)
-                .map(Map.Entry::getValue)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 交易ID组合时间的key,以transactionId为主键,实现了equals和hashcode
-     * <p>
-     * 方便模拟排序分页
-     * <p>
-     * 类似联合索引
-     */
-    public record TransactionIdAndTimeKey(@Nonnull String transactionId, @Nonnull Long transactionTime) {
-        @Override
-        public int hashCode() {
-            return Objects.hash(transactionId);
-        }
 
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null || getClass() != obj.getClass())
-                return false;
-            TransactionIdAndTimeKey that = (TransactionIdAndTimeKey) obj;
-            return transactionId.equals(that.transactionId);
-        }
-    }
 }

@@ -40,6 +40,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionDTO createTransaction(@Nonnull Long memberId,@Nonnull CreateTransactionReq request) {
+        if(request == null){
+            throw new NullPointerException("Request is required");
+        }
         log.info(
                 "Creating new transaction start,memberId: {},accountId: {},opponentAccountId: {},amount: {},type: {},description: {}",
                 memberId, request.getAccountId(), request.getOpponentAccountId(), request.getAmount(),
@@ -52,6 +55,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionDTO updateTransaction(@Nonnull String transactionId, @Nonnull UpdateTransactionReq request) {
+        if(request == null){
+            throw new NullPointerException("Request is required");
+        }
         log.info("Updating transaction with transactionId: {},request: {}", transactionId, request);
         if(StringUtils.isBlank(transactionId)){
             throw new TransactionParamInvalidException("TransactionId is required");
@@ -105,7 +111,7 @@ public class TransactionServiceImpl implements TransactionService {
         pageResult.setPage(page);
         pageResult.setPageSize(size);
         pageResult.setTotal(transactionRepository.count());
-        pageResult.setTotalPages(transactionRepository.count() / size);
+        pageResult.setTotalPages((int)Math.ceil((double)transactionRepository.count() / size));
         pageResult.setResults(transactionRepository.pageList(page, size).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList()));

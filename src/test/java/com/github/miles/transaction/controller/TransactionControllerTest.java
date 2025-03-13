@@ -1,18 +1,16 @@
 package com.github.miles.transaction.controller;
 
-import static com.github.miles.transaction.AssertTestUtils.*;
 import static com.github.miles.transaction.controller.TransactionController.API_TRANSACTIONS;
+import static com.github.miles.transaction.utils.AssertTestUtils.assertBaseResponse;
+import static com.github.miles.transaction.utils.AssertTestUtils.assertBaseResponsePageResult;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -21,11 +19,10 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import com.github.miles.transaction.BaseTest;
 import com.github.miles.transaction.api.base.ApiCode;
 import com.github.miles.transaction.api.base.BaseResponse;
 import com.github.miles.transaction.api.base.PageResult;
-import com.github.miles.transaction.api.base.helper.ResponseHelper;
-import com.github.miles.transaction.constants.TransactionType;
 import com.github.miles.transaction.dto.TransactionDTO;
 import com.github.miles.transaction.dto.request.CreateTransactionReq;
 import com.github.miles.transaction.dto.request.UpdateTransactionReq;
@@ -41,7 +38,7 @@ import com.github.miles.transaction.service.TransactionService;
  * @since 2025-03-13
  */
 @WebFluxTest(TransactionController.class)
-class TransactionControllerTest {
+class TransactionControllerTest extends BaseTest {
 
     @Autowired
     private WebTestClient webTestClient;
@@ -49,44 +46,6 @@ class TransactionControllerTest {
     @MockBean
     private TransactionService transactionService;
 
-    private CreateTransactionReq validRequest;
-
-    private TransactionDTO mockDTO;
-
-    private BaseResponse<TransactionDTO> mockSuccessRsp;
-
-    private String testTransactionId;
-
-    private String accountId;
-    private String opponentAccountId;
-
-    @BeforeEach
-    void setUp() {
-        testTransactionId = UUID.randomUUID().toString().replace("-", "");
-        accountId = "12345678";
-        opponentAccountId = "12345678_";
-        BigDecimal amount = new BigDecimal("100.00");
-        validRequest = new CreateTransactionReq(
-                accountId,
-                opponentAccountId,
-                amount,
-                TransactionType.DEPOSIT.getType(),
-                "Test transaction");
-
-        mockDTO = new TransactionDTO();
-        mockDTO.setId(1L);
-        mockDTO.setTransactionId(testTransactionId);
-        mockDTO.setMemberId(1L);
-        mockDTO.setTransactionTime(System.currentTimeMillis());
-        mockDTO.setUpdatedTime(System.currentTimeMillis());
-        mockDTO.setAccountId(accountId);
-        mockDTO.setOpponentAccountId(opponentAccountId);
-        mockDTO.setAmount(amount);
-        mockDTO.setTransactionType(TransactionType.DEPOSIT.getType());
-        mockDTO.setDescription("Test transaction");
-
-        mockSuccessRsp = ResponseHelper.success(mockDTO);
-    }
 
     @Test
     void testCreateTransactionSuccess() {
