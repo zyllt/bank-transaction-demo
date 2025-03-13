@@ -19,12 +19,29 @@ A simple Spring Boot application for managing banking transactions.
 - Spring WebFlux for reactive programming
 - Spring Validation for input validation
 - Spring Boot JSON for JSON processing
+- Spring Boot Cache and Caffeine Cache improve performance
 - Apache Commons Lang3 for utility functions
 - Project Lombok for reducing boilerplate code
 - JUnit 5 for testing
 - Reactor Test for testing reactive components
 - Docker for containerization
 - Maven for project management
+
+## Caching Implementation
+
+The application uses Spring Cache to improve performance by caching frequently accessed transaction data:
+
+- **Cache Configuration**: Configured in `CacheConfig.java` using Caffeine as the cache provider
+- **Cache Usage**:
+  - Transaction retrieval operations are cached to reduce database/storage access
+  - Cache is automatically invalidated when transactions are updated or deleted
+  - Custom TTL (Time-To-Live) settings to ensure data freshness
+- **Cache Annotations**:
+  - `@Cacheable`: Applied to retrieval methods to store and fetch from cache
+  - `@CacheEvict`: Used on update/delete operations to remove stale data
+  - `@CachePut`: Used to update the cache when transaction data changes
+
+This caching strategy significantly reduces response times for repeated transaction queries.
 
 
 
@@ -45,6 +62,8 @@ A simple Spring Boot application for managing banking transactions.
 ```bash
 ./mvnw spring-boot:run
 ```
+After starting the application, you can opening your browser and navigating to:
+`http://localhost:8080`
 
 ### Using Docker
 
@@ -53,6 +72,10 @@ Build the Docker image:
 ```bash
 docker build -t bank-transaction-demo .
 ```
+
+The application uses Eclipse Temurin JDK 21 for building and JRE 21 Alpine for runtime. For more information about these images, see: https://hub.docker.com/_/eclipse-temurin
+
+You can modify the Dockerfile to use different Java images according to your requirements. For example, to use a different JDK version or distribution, simply update the base images in the Dockerfile
 
 Run the Docker container:
 

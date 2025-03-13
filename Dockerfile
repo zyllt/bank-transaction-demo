@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace/app
 
 # Copy maven executable and pom.xml
@@ -30,4 +30,4 @@ COPY --from=build ${DEPENDENCY}/META-INF /app/META-INF
 COPY --from=build ${DEPENDENCY}/BOOT-INF/classes /app
 
 # Set the entrypoint
-ENTRYPOINT ["java","-cp","app:app/lib/*","com.github.miles.transaction.BankTransactionDemoApplication"] 
+ENTRYPOINT ["java","-cp","app:app/lib/*","com.hsbc.demo.transaction.BankTransactionDemoApplication"] 
