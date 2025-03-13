@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: bank-transaction-demo
+  profiles:
+    default: dev
+  ### jackson 序列化配置
+  jackson:
+    default-property-inclusion: non-empty
+    date-format: 'yyyy-MM-dd HH:mm:ss'
+    serialization:
+      fail-on-empty-beans: false
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-ignored-properties: false
+      fail-on-unknown-properties: false
+      accept-empty-string-as-null-object: true
+      read-unknown-enum-values-as-null: true
+    generator:
+      ignore-unknown: true
+      write-bigdecimal-as-plain: true
+    parser:
+      allow-unquoted-field-names: true
+      allow-single-quotes: true
+      allow-unquoted-control-chars: true
+    visibility:
+      field: any
+
