@@ -27,9 +27,9 @@ A simple Spring Boot application for managing banking transactions.
 | Method | URL                      | Description                                |
 |--------|---------------------------|--------------------------------------------|
 | POST   | /api/transactions        | Create a new transaction                   |
-| GET    | /api/transactions/{id}   | Get a transaction by ID                    |
-| PUT    | /api/transactions/{id}   | Update an existing transaction             |
-| DELETE | /api/transactions/{id}   | Delete a transaction                       |
+| GET    | /api/transactions/{TransactionId}   | Get a transaction by TransactionId                    |
+| PUT    | /api/transactions/{TransactionId}   | Update an existing transaction             |
+| DELETE | /api/transactions/{TransactionId}   | Delete a transaction                       |
 | GET    | /api/transactions        | Get all transactions with pagination       |
 
 ## Running the Application
@@ -70,17 +70,18 @@ Run the tests using Maven:
 curl -X POST http://localhost:8080/api/transactions \
   -H "Content-Type: application/json" \
   -d '{
-    "accountNumber": "12345678",
+    "accountId": "12345678",
+    "opponentAccountId": "12345678_",
     "amount": 100.00,
-    "type": "DEPOSIT",
+    "transactionType": 1,
     "description": "Initial deposit"
   }'
 ```
 
-### Get All Transactions
+### Page List Transactions
 
 ```bash
-curl -X GET http://localhost:8080/api/transactions?page=0&size=10
+curl -X GET "http://localhost:8080/api/transactions?page=1&size=10"
 ```
 
 ## Project Structure
@@ -98,11 +99,3 @@ curl -X GET http://localhost:8080/api/transactions?page=0&size=10
 - Implements caching to improve read performance
 - Pagination for efficient retrieval of large datasets
 - Proper exception handling for robustness
-
-## Future Improvements
-
-- Add authentication and authorization
-- Implement persistent storage with a database
-- Add more comprehensive logging
-- Implement rate limiting
-- Add API documentation with Swagger/OpenAPI

@@ -48,7 +48,7 @@ class TransactionControllerTest extends BaseTest {
 
 
     @Test
-    void testCreateTransactionSuccess() {
+    void testWhenCreateTransactionSuccess() {
         when(transactionService.createTransaction(anyLong(), any(CreateTransactionReq.class)))
                 .thenReturn(mockDTO);
         webTestClient.post()
@@ -63,7 +63,7 @@ class TransactionControllerTest extends BaseTest {
 
     //TransactionParamInvalidException
     @Test
-    void testCreateTransactionParamInvalid() {
+    void testWhenCreateTransactionParamInvalidReturnError() {
         TransactionParamInvalidException ex = new TransactionParamInvalidException("Invalid request");
         when(transactionService.createTransaction(anyLong(), any(CreateTransactionReq.class)))
                 .thenThrow(ex);
