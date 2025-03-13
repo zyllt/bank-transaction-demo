@@ -80,7 +80,7 @@ public class TransactionServiceImpl implements TransactionService {
             return;
         }
         //简单检查下只能删除自己的
-        if(transaction.getMemberId() != memberId){
+        if(!transaction.getMemberId().equals(memberId)){
             throw new TransactionNoPermissionException();
         }
         int deleteCount = transactionRepository.delete(transactionId,memberId);

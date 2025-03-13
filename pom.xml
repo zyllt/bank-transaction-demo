@@ -87,6 +87,21 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
+					<image>
+						<name>${project.artifactId}:${project.version}</name>
+						<!-- <builder>paketobuildpacks/builder:base</builder> -->
+						<env>
+							<JAVA_TOOL_OPTIONS>
+								-XX:+UseContainerSupport
+								-XX:+UseCGroupMemoryLimitForHeap
+								-XX:+PrintCommandLineFlags
+							</JAVA_TOOL_OPTIONS>
+							<BP_JVM_VERSION>21</BP_JVM_VERSION>
+						</env>
+					</image>
+					<layers>
+						<enabled>true</enabled>
+					</layers>
 					<excludes>
 						<exclude>
 							<groupId>org.projectlombok</groupId>

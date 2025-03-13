@@ -5,7 +5,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 
 /**
- * Main application class for the Bank Transaction Demo
+ * 银行交易示例应用
+ * 
+ * @author miles.zeng
+ * @since 2025-03-12
  */
 @SpringBootApplication
 @EnableCaching

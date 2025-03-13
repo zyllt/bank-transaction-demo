@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Transaction Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏦</text></svg>">
+    <style>
+        .transaction-card {
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .transaction-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .badge-deposit { background-color: #28a745; }
+        .badge-withdrawal { background-color: #dc3545; }
+        .badge-transfer { background-color: #17a2b8; }
+        .badge-payment { background-color: #fd7e14; }
+        .badge-refund { background-color: #6f42c1; }
+        .badge-other { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">银行交易管理系统</h1>
+        
+        <!-- Transaction Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 id="formTitle">创建新交易</h5>
+            </div>
+            <div class="card-body">
+                <form id="transactionForm">
+                    <input type="hidden" id="transactionId">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="accountId" class="form-label">账户ID</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="accountId" required>
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">选择用户</button>
+                                <ul class="dropdown-menu dropdown-menu-end" id="userDropdown">
+                                    <li><a class="dropdown-item" href="#" data-account-id="10001">张三 (10001)</a></li>
+                                    <li><a class="dropdown-item" href="#" data-account-id="10002">李四 (10002)</a></li>
+                                    <li><a class="dropdown-item" href="#" data-account-id="10003">王五 (10003)</a></li>
+                                    <li><a class="dropdown-item" href="#" data-account-id="10004">赵六 (10004)</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" data-account-id="20001">企业账户 (20001)</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="opponentAccountId" class="form-label">对方账户ID</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="opponentAccountId" required>
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">选择用户</button>
+                                <ul class="dropdown-menu dropdown-menu-end" id="opponentUserDropdown">
+                                    <li><a class="dropdown-item" href="#" data-account-id="10001">张三 (10001)</a></li>
+                                    <li><a class="dropdown-item" href="#" data-account-id="10002">李四 (10002)</a></li>
+                                    <li><a class="dropdown-item" href="#" data-account-id="10003">王五 (10003)</a></li>
+                                    <li><a class="dropdown-item" href="#" data-account-id="10004">赵六 (10004)</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" data-account-id="20001">企业账户 (20001)</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="amount" class="form-label">金额</label>
+                            <input type="number" class="form-control" id="amount" step="0.00001" min="0.00001" max="9999999999.99999" required>
+                            <div class="form-text">最多支持5位小数</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="transactionType" class="form-label">交易类型</label>
+                            <select class="form-select" id="transactionType" required>
+                                <option value="1">存款</option>
+                                <option value="2">取款</option>
+                                <option value="3">转账</option>
+                                <option value="4">支付</option>
+                                <option value="5">退款</option>
+                                <option value="6">其他</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">描述</label>
+                        <textarea class="form-control" id="description" rows="2" required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">创建交易</button>
+                        <button type="button" class="btn btn-secondary" id="resetBtn">重置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Transactions List -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>交易列表</h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" id="refreshBtn">刷新</button>
+                    <span class="ms-2">页码: <span id="currentPage">1</span> / <span id="totalPages">1</span></span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="transactionsList" class="row">
+                    <!-- Transactions will be loaded here -->
+                    <div class="text-center py-5">加载交易记录中...</div>
+                </div>
+                <div class="d-flex justify-content-center mt-3">
+                    <nav aria-label="Transaction pagination">
+                        <ul class="pagination" id="pagination">
+                            <!-- Pagination will be generated here -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Detail Modal -->
+    <div class="modal fade" id="transactionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">交易详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="transactionDetails">
+                    <!-- Transaction details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-danger" id="deleteTransactionBtn">删除</button>
+                    <button type="button" class="btn btn-primary" id="editTransactionBtn">编辑</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalPages = 1;
+        let editMode = false;
+        let currentTransactionId = null;
+        const transactionModal = new bootstrap.Modal(document.getElementById('transactionModal'));
+        
+        // Transaction type mapping
+        const transactionTypes = {
+            1: { name: '存款', class: 'badge-deposit' },
+            2: { name: '取款', class: 'badge-withdrawal' },
+            3: { name: '转账', class: 'badge-transfer' },
+            4: { name: '支付', class: 'badge-payment' },
+            5: { name: '退款', class: 'badge-refund' },
+            6: { name: '其他', class: 'badge-other' }
+        };
+        
+        // DOM elements
+        const transactionForm = document.getElementById('transactionForm');
+        const formTitle = document.getElementById('formTitle');
+        const submitBtn = document.getElementById('submitBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const transactionsList = document.getElementById('transactionsList');
+        const paginationEl = document.getElementById('pagination');
+        const currentPageEl = document.getElementById('currentPage');
+        const totalPagesEl = document.getElementById('totalPages');
+        const deleteTransactionBtn = document.getElementById('deleteTransactionBtn');
+        const editTransactionBtn = document.getElementById('editTransactionBtn');
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTransactions(currentPage, pageSize);
+            
+            transactionForm.addEventListener('submit', handleFormSubmit);
+            resetBtn.addEventListener('click', resetForm);
+            refreshBtn.addEventListener('click', () => loadTransactions(currentPage, pageSize));
+            deleteTransactionBtn.addEventListener('click', handleDeleteTransaction);
+            editTransactionBtn.addEventListener('click', prepareEditTransaction);
+            
+            // 添加用户下拉菜单事件监听器
+            document.querySelectorAll('#userDropdown .dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const accountId = e.target.dataset.accountId;
+                    document.getElementById('accountId').value = accountId;
+                });
+            });
+            
+            document.querySelectorAll('#opponentUserDropdown .dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const accountId = e.target.dataset.accountId;
+                    document.getElementById('opponentAccountId').value = accountId;
+                });
+            });
+        });
+        
+        // API functions
+        async function fetchTransactions(page, size) {
+            try {
+                const response = await fetch(`/api/transactions?page=${page}&size=${size}`);
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching transactions:', error);
+                return { code: 500, msg: 'Failed to fetch transactions', data: null };
+            }
+        }
+        
+        async function fetchTransaction(id) {
+            try {
+                const response = await fetch(`/api/transactions/${id}`);
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching transaction:', error);
+                return { code: 500, msg: 'Failed to fetch transaction', data: null };
+            }
+        }
+        
+        async function createTransaction(data) {
+            try {
+                const response = await fetch('/api/transactions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Error creating transaction:', error);
+                return { code: 500, msg: 'Failed to create transaction', data: null };
+            }
+        }
+        
+        async function updateTransaction(id, data) {
+            try {
+                const response = await fetch(`/api/transactions/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Error updating transaction:', error);
+                return { code: 500, msg: 'Failed to update transaction', data: null };
+            }
+        }
+        
+        async function deleteTransaction(id) {
+            try {
+                const response = await fetch(`/api/transactions/${id}`, {
+                    method: 'DELETE'
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Error deleting transaction:', error);
+                return { code: 500, msg: 'Failed to delete transaction', data: null };
+            }
+        }
+        
+        // UI functions
+        async function loadTransactions(page, size) {
+            transactionsList.innerHTML = '<div class="text-center py-5">加载交易记录中...</div>';
+            
+            const response = await fetchTransactions(page, size);
+            
+            if (response.code === 0 && response.data) {
+                const { results, page: pageNum, totalPages: pages, total } = response.data;
+                
+                currentPage = pageNum;
+                totalPages = pages;
+                currentPageEl.textContent = currentPage;
+                totalPagesEl.textContent = totalPages;
+                
+                if (results && results.length > 0) {
+                    renderTransactions(results);
+                    renderPagination(currentPage, totalPages);
+                } else {
+                    transactionsList.innerHTML = '<div class="col-12 text-center py-5">未找到交易记录</div>';
+                    paginationEl.innerHTML = '';
+                }
+            } else {
+                transactionsList.innerHTML = `<div class="col-12 text-center py-5 text-danger">
+                    错误: ${response.msg || '加载交易记录失败'}
+                </div>`;
+                paginationEl.innerHTML = '';
+            }
+        }
+        
+        function renderTransactions(transactions) {
+            transactionsList.innerHTML = '';
+            
+            transactions.forEach(transaction => {
+                const transactionType = transactionTypes[transaction.transactionType] || 
+                                       { name: '未知', class: 'badge-other' };
+                const date = new Date(transaction.transactionTime).toLocaleString();
+                
+                const transactionCard = document.createElement('div');
+                transactionCard.className = 'col-md-6 col-lg-4';
+                transactionCard.innerHTML = `
+                    <div class="card transaction-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="card-title mb-0">交易 #${transaction.id}</h6>
+                                <span class="badge ${transactionType.class} text-white">${transactionType.name}</span>
+                            </div>
+                            <p class="card-text mb-1">金额: ￥${transaction.amount}</p>
+                            <p class="card-text mb-1">从: ${transaction.accountId}</p>
+                            <p class="card-text mb-1">至: ${transaction.opponentAccountId}</p>
+                            <p class="card-text text-muted small mb-2">${date}</p>
+                            <button class="btn btn-sm btn-outline-primary view-details" 
+                                    data-transaction-id="${transaction.transactionId}">
+                                查看详情
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                transactionsList.appendChild(transactionCard);
+                
+                // Add event listener to the view details button
+                const viewDetailsBtn = transactionCard.querySelector('.view-details');
+                viewDetailsBtn.addEventListener('click', () => showTransactionDetails(transaction.transactionId));
+            });
+        }
+        
+        function renderPagination(currentPage, totalPages) {
+            paginationEl.innerHTML = '';
+            
+            // Previous button
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}">上一页</a>`;
+            paginationEl.appendChild(prevLi);
+            
+            // Page numbers
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+                paginationEl.appendChild(pageLi);
+            }
+            
+            // Next button
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}">下一页</a>`;
+            paginationEl.appendChild(nextLi);
+            
+            // Add event listeners to pagination links
+            document.querySelectorAll('.page-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = parseInt(e.target.dataset.page);
+                    if (page >= 1 && page <= totalPages) {
+                        loadTransactions(page, pageSize);
+                    }
+                });
+            });
+        }
+        
+        async function showTransactionDetails(transactionId) {
+            const response = await fetchTransaction(transactionId);
+            
+            if (response.code === 0 && response.data) {
+                const transaction = response.data;
+                currentTransactionId = transaction.transactionId;
+                
+                const transactionType = transactionTypes[transaction.transactionType] || 
+                                       { name: '未知', class: 'badge-other' };
+                const createdDate = new Date(transaction.transactionTime).toLocaleString();
+                const updatedDate = new Date(transaction.updatedTime).toLocaleString();
+                
+                const detailsEl = document.getElementById('transactionDetails');
+                detailsEl.innerHTML = `
+                    <div class="mb-3">
+                        <span class="badge ${transactionType.class} text-white">${transactionType.name}</span>
+                        <h6 class="mt-2">交易ID: ${transaction.transactionId}</h6>
+                    </div>
+                    <div class="mb-3">
+                        <p><strong>金额:</strong> ￥${transaction.amount}</p>
+                        <p><strong>付款账户:</strong> ${transaction.accountId}</p>
+                        <p><strong>收款账户:</strong> ${transaction.opponentAccountId}</p>
+                        <p><strong>描述:</strong> ${transaction.description}</p>
+                    </div>
+                    <div class="small text-muted">
+                        <p>创建时间: ${createdDate}</p>
+                        <p>最后更新: ${updatedDate}</p>
+                    </div>
+                `;
+                
+                transactionModal.show();
+            } else {
+                alert(`错误: ${response.msg || '加载交易详情失败'}`);
+            }
+        }
+        
+        function prepareEditTransaction() {
+            if (!currentTransactionId) return;
+            
+            fetchTransaction(currentTransactionId).then(response => {
+                if (response.code === 0 && response.data) {
+                    const transaction = response.data;
+                    
+                    // Fill the form with transaction data
+                    document.getElementById('transactionId').value = transaction.transactionId;
+                    document.getElementById('accountId').value = transaction.accountId;
+                    document.getElementById('opponentAccountId').value = transaction.opponentAccountId;
+                    document.getElementById('amount').value = transaction.amount;
+                    document.getElementById('transactionType').value = transaction.transactionType;
+                    document.getElementById('description').value = transaction.description;
+                    
+                    // Update UI for edit mode
+                    formTitle.textContent = '编辑交易';
+                    submitBtn.textContent = '更新交易';
+                    editMode = true;
+                    
+                    // Close the modal and scroll to the form
+                    transactionModal.hide();
+                    document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert(`错误: ${response.msg || '加载交易详情失败'}`);
+                }
+            });
+        }
+        
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const amountInput = document.getElementById('amount');
+            const amountValue = amountInput.value;
+            
+            // 验证小数位数不超过5位
+            if (amountValue.includes('.')) {
+                const decimalPart = amountValue.split('.')[1];
+                if (decimalPart && decimalPart.length > 5) {
+                    alert('金额最多支持5位小数');
+                    amountInput.focus();
+                    return;
+                }
+            }
+            
+            const formData = {
+                accountId: document.getElementById('accountId').value,
+                opponentAccountId: document.getElementById('opponentAccountId').value,
+                amount: parseFloat(amountValue),
+                transactionType: parseInt(document.getElementById('transactionType').value),
+                description: document.getElementById('description').value
+            };
+            
+            let response;
+            
+            if (editMode) {
+                const transactionId = document.getElementById('transactionId').value;
+                response = await updateTransaction(transactionId, formData);
+            } else {
+                response = await createTransaction(formData);
+            }
+            
+            if (response.code === 0) {
+                alert(editMode ? '交易更新成功！' : '交易创建成功！');
+                resetForm();
+                loadTransactions(currentPage, pageSize);
+            } else {
+                alert(`错误: ${response.msg || '操作失败'}`);
+            }
+        }
+        
+        async function handleDeleteTransaction() {
+            if (!currentTransactionId) return;
+            
+            if (confirm('确定要删除此交易记录吗？')) {
+                const response = await deleteTransaction(currentTransactionId);
+                
+                if (response.code === 0) {
+                    alert('交易删除成功！');
+                    transactionModal.hide();
+                    loadTransactions(currentPage, pageSize);
+                } else {
+                    alert(`错误: ${response.msg || '删除交易失败'}`);
+                }
+            }
+        }
+        
+        function resetForm() {
+            transactionForm.reset();
+            document.getElementById('transactionId').value = '';
+            formTitle.textContent = '创建新交易';
+            submitBtn.textContent = '创建交易';
+            editMode = false;
+        }
+    </script>
+</body>
+</html> 

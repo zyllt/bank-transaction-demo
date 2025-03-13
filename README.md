@@ -16,11 +16,17 @@ A simple Spring Boot application for managing banking transactions.
 
 - Java 21
 - Spring Boot 3.3.9
-- Spring WebFlux
-- Spring Validation
+- Spring WebFlux for reactive programming
+- Spring Validation for input validation
+- Spring Boot JSON for JSON processing
+- Apache Commons Lang3 for utility functions
+- Project Lombok for reducing boilerplate code
 - JUnit 5 for testing
+- Reactor Test for testing reactive components
 - Docker for containerization
 - Maven for project management
+
+
 
 ## API Endpoints
 
