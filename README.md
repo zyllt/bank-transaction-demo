@@ -62,8 +62,8 @@ This caching strategy significantly reduces response times for repeated transact
 ```bash
 ./mvnw spring-boot:run
 ```
-After starting the application, you can opening your browser and navigating to:
-`http://localhost:8080`
+After starting the application, you can access the transaction management interface by opening your browser and navigating to:
+`http://localhost:8080` 
 
 ### Using Docker
 
@@ -82,6 +82,9 @@ Run the Docker container:
 ```bash
 docker run -p 8080:8080 bank-transaction-demo
 ```
+
+
+
 
 ## Testing the Application
 
